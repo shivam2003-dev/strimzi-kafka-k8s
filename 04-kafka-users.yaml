@@ -1,0 +1,159 @@
+# Kafka Users Configuration
+# This creates users with different authentication and authorization settings
+
+---
+# Producer user with write permissions
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: producer-user
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      # Allow writing to all topics
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: Write
+        host: "*"
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: Create
+        host: "*"
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: Describe
+        host: "*"
+---
+# Consumer user with read permissions
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: consumer-user
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      # Allow reading from all topics
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: Read
+        host: "*"
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: Describe
+        host: "*"
+      # Allow consumer group operations
+      - resource:
+          type: group
+          name: "*"
+          patternType: literal
+        operation: Read
+        host: "*"
+---
+# Admin user with full permissions
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: admin-user
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      # Full access to all topics
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: All
+        host: "*"
+      # Full access to consumer groups
+      - resource:
+          type: group
+          name: "*"
+          patternType: literal
+        operation: All
+        host: "*"
+      # Cluster operations
+      - resource:
+          type: cluster
+        operation: All
+        host: "*"
+---
+# Application-specific user
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: app-user
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      # Read and write to specific topics
+      - resource:
+          type: topic
+          name: test-topic
+          patternType: literal
+        operation: Read
+        host: "*"
+      - resource:
+          type: topic
+          name: test-topic
+          patternType: literal
+        operation: Write
+        host: "*"
+      - resource:
+          type: topic
+          name: test-topic
+          patternType: literal
+        operation: Describe
+        host: "*"
+      - resource:
+          type: topic
+          name: user-events
+          patternType: literal
+        operation: Read
+        host: "*"
+      - resource:
+          type: topic
+          name: user-events
+          patternType: literal
+        operation: Write
+        host: "*"
+      - resource:
+          type: group
+          name: app-consumer-group
+          patternType: literal
+        operation: Read
+        host: "*"
+

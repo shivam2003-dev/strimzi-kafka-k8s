@@ -1,0 +1,29 @@
+# Kubernetes secrets and sensitive data
+*.key
+*.crt
+*.pem
+*.p12
+*.jks
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+
+# Backup files
+*.bak
+*.backup
+

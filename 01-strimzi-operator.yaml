@@ -1,0 +1,363 @@
+# Strimzi Operator Installation
+# This file installs the Strimzi operator which manages Kafka clusters on Kubernetes
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka
+  labels:
+    name: kafka
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: kafkas.kafka.strimzi.io
+spec:
+  group: kafka.strimzi.io
+  versions:
+  - name: v1beta2
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              kafka:
+                type: object
+                properties:
+                  replicas:
+                    type: integer
+                    minimum: 1
+                  version:
+                    type: string
+                  image:
+                    type: string
+                  listeners:
+                    type: object
+                    properties:
+                      plain:
+                        type: object
+                      tls:
+                        type: object
+                      external:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            enum: [nodeport, loadbalancer, ingress]
+                  config:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  storage:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [ephemeral, persistent-claim]
+                      size:
+                        type: string
+                      class:
+                        type: string
+                  jvmOptions:
+                    type: object
+                    properties:
+                      heapOpts:
+                        type: string
+              zookeeper:
+                type: object
+                properties:
+                  replicas:
+                    type: integer
+                    minimum: 1
+                  image:
+                    type: string
+                  storage:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [ephemeral, persistent-claim]
+                      size:
+                        type: string
+                      class:
+                        type: string
+              entityOperator:
+                type: object
+                properties:
+                  topicOperator:
+                    type: object
+                  userOperator:
+                    type: object
+              clusterCa:
+                type: object
+              clientsCa:
+                type: object
+              maintenanceTimeWindows:
+                type: array
+                items:
+                  type: string
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+  scope: Namespaced
+  names:
+    kind: Kafka
+    listKind: KafkaList
+    plural: kafkas
+    singular: kafka
+    shortNames:
+    - k
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: kafkatopics.kafka.strimzi.io
+spec:
+  group: kafka.strimzi.io
+  versions:
+  - name: v1beta2
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              partitions:
+                type: integer
+                minimum: 1
+              replicas:
+                type: integer
+                minimum: 1
+              config:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              topicName:
+                type: string
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+  scope: Namespaced
+  names:
+    kind: KafkaTopic
+    listKind: KafkaTopicList
+    plural: kafkatopics
+    singular: kafkatopic
+    shortNames:
+    - kt
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: kafkausers.kafka.strimzi.io
+spec:
+  group: kafka.strimzi.io
+  versions:
+  - name: v1beta2
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              authentication:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [tls, scram-sha-512, scram-sha-256]
+              authorization:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [simple, rbac]
+                  acls:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        resource:
+                          type: object
+                          properties:
+                            type:
+                              type: string
+                              enum: [topic, group, cluster, transactionalId]
+                            name:
+                              type: string
+                            patternType:
+                              type: string
+                              enum: [literal, prefix]
+                        operation:
+                          type: string
+                          enum: [Read, Write, Create, Delete, Alter, Describe, ClusterAction, AlterConfigs, DescribeConfigs, IdempotentWrite, All]
+                        host:
+                          type: string
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+  scope: Namespaced
+  names:
+    kind: KafkaUser
+    listKind: KafkaUserList
+    plural: kafkausers
+    singular: kafkauser
+    shortNames:
+    - ku
+---
+# ClusterRole for Strimzi operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: strimzi-cluster-operator-global
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - namespaces
+  - persistentvolumes
+  - storageclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - kafka.strimzi.io
+  resources:
+  - "*"
+  verbs:
+  - "*"
+---
+# ClusterRoleBinding for Strimzi operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: strimzi-cluster-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: strimzi-cluster-operator-global
+subjects:
+- kind: ServiceAccount
+  name: strimzi-cluster-operator
+  namespace: kafka
+---
+# ServiceAccount for Strimzi operator
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: strimzi-cluster-operator
+  namespace: kafka
+---
+# Deployment for Strimzi operator
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: strimzi-cluster-operator
+  namespace: kafka
+  labels:
+    app: strimzi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: strimzi-cluster-operator
+  template:
+    metadata:
+      labels:
+        name: strimzi-cluster-operator
+    spec:
+      serviceAccountName: strimzi-cluster-operator
+      containers:
+      - name: strimzi-cluster-operator
+        image: quay.io/strimzi/operator:0.38.0
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: STRIMZI_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: STRIMZI_FULL_RECONCILIATION_INTERVAL_MS
+          value: "120000"
+        - name: STRIMZI_LOG_LEVEL
+          value: "INFO"
+        - name: STRIMZI_OPERATION_TIMEOUT_MS
+          value: "300000"
+        livenessProbe:
+          httpGet:
+            path: /healthy
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

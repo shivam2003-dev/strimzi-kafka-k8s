@@ -1,0 +1,227 @@
+# Test Applications for Kafka
+# Producer and Consumer applications to test Kafka functionality
+
+---
+# Kafka Producer Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-producer
+  namespace: kafka
+  labels:
+    app: kafka-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-producer
+  template:
+    metadata:
+      labels:
+        app: kafka-producer
+    spec:
+      containers:
+      - name: producer
+        image: quay.io/strimzi/kafka:0.38.0-kafka-3.6.0
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # Wait for Kafka to be ready
+          sleep 30
+          
+          # Produce messages continuously
+          while true; do
+            echo "$(date): Message from producer - Random number: $RANDOM" | \
+            bin/kafka-console-producer.sh \
+              --bootstrap-server my-cluster-kafka-bootstrap:9092 \
+              --topic test-topic
+            sleep 5
+          done
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+# Kafka Consumer Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-consumer
+  namespace: kafka
+  labels:
+    app: kafka-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-consumer
+  template:
+    metadata:
+      labels:
+        app: kafka-consumer
+    spec:
+      containers:
+      - name: consumer
+        image: quay.io/strimzi/kafka:0.38.0-kafka-3.6.0
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # Wait for Kafka to be ready
+          sleep 30
+          
+          # Consume messages
+          bin/kafka-console-consumer.sh \
+            --bootstrap-server my-cluster-kafka-bootstrap:9092 \
+            --topic test-topic \
+            --group test-consumer-group \
+            --from-beginning
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+# Python Producer Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: python-producer
+  namespace: kafka
+spec:
+  template:
+    metadata:
+      labels:
+        app: python-producer
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: producer
+        image: python:3.11-slim
+        command:
+        - /bin/bash
+        - -c
+        - |
+          pip install kafka-python
+          
+          cat > producer.py << 'EOF'
+          from kafka import KafkaProducer
+          import json
+          import time
+          from datetime import datetime
+          
+          producer = KafkaProducer(
+              bootstrap_servers=['my-cluster-kafka-bootstrap:9092'],
+              value_serializer=lambda v: json.dumps(v).encode('utf-8')
+          )
+          
+          print("Starting Python producer...")
+          for i in range(100):
+              message = {
+                  'id': i,
+                  'timestamp': datetime.now().isoformat(),
+                  'message': f'Python message {i}',
+                  'data': {'value': i * 10}
+              }
+              producer.send('test-topic', value=message)
+              print(f"Sent: {message}")
+              time.sleep(1)
+          
+          producer.flush()
+          producer.close()
+          print("Producer finished!")
+          EOF
+          
+          python producer.py
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+# Python Consumer Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-consumer
+  namespace: kafka
+  labels:
+    app: python-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-consumer
+  template:
+    metadata:
+      labels:
+        app: python-consumer
+    spec:
+      containers:
+      - name: consumer
+        image: python:3.11-slim
+        command:
+        - /bin/bash
+        - -c
+        - |
+          pip install kafka-python
+          
+          cat > consumer.py << 'EOF'
+          from kafka import KafkaConsumer
+          import json
+          
+          consumer = KafkaConsumer(
+              'test-topic',
+              bootstrap_servers=['my-cluster-kafka-bootstrap:9092'],
+              auto_offset_reset='earliest',
+              enable_auto_commit=True,
+              group_id='python-consumer-group',
+              value_deserializer=lambda x: json.loads(x.decode('utf-8')) if x else None
+          )
+          
+          print("Starting Python consumer...")
+          for message in consumer:
+              print(f"Received: {message.value}")
+              print(f"Partition: {message.partition}, Offset: {message.offset}")
+          EOF
+          
+          python consumer.py
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+# Kafka Tools Pod for manual testing
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-client
+  namespace: kafka
+  labels:
+    app: kafka-client
+spec:
+  containers:
+  - name: kafka-client
+    image: quay.io/strimzi/kafka:0.38.0-kafka-3.6.0
+    command:
+    - sleep
+    - "infinity"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
