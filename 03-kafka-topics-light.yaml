@@ -1,0 +1,85 @@
+# Kafka Topics Configuration (Lightweight for single-node cluster)
+
+---
+# Simple topic with default settings
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: test-topic
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000  # 7 days
+    segment.bytes: 1073741824
+    compression.type: producer
+---
+# High-throughput topic
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: high-throughput-topic
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 5
+  replicas: 1
+  config:
+    retention.ms: 86400000  # 1 day
+    segment.bytes: 536870912
+    compression.type: lz4
+    min.insync.replicas: 1
+---
+# Compacted topic (for event sourcing)
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: compacted-topic
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 2
+  replicas: 1
+  config:
+    cleanup.policy: compact
+    segment.ms: 3600000
+    min.compaction.lag.ms: 0
+    delete.retention.ms: 86400000
+---
+# Events topic for event-driven architecture
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: user-events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 2592000000  # 30 days
+    compression.type: snappy
+    min.insync.replicas: 1
+---
+# Logs topic
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: application-logs
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000  # 7 days
+    retention.bytes: 5368709120  # 5GB
+    compression.type: gzip
+

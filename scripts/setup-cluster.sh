@@ -62,7 +62,10 @@ install_operator() {
 deploy_kafka() {
     print_info "Deploying Kafka cluster..."
     
-    kubectl apply -f ../02-kafka-cluster.yaml
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+    
+    kubectl apply -f "${PROJECT_DIR}/02-kafka-cluster.yaml"
     
     print_info "Waiting for Kafka cluster to be ready (this may take 5-10 minutes)..."
     kubectl wait kafka/my-cluster --for=condition=Ready --timeout=600s -n kafka
@@ -74,7 +77,10 @@ deploy_kafka() {
 create_topics() {
     print_info "Creating Kafka topics..."
     
-    kubectl apply -f ../03-kafka-topics.yaml
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+    
+    kubectl apply -f "${PROJECT_DIR}/03-kafka-topics.yaml"
     
     sleep 10
     
@@ -86,7 +92,10 @@ create_topics() {
 create_users() {
     print_info "Creating Kafka users..."
     
-    kubectl apply -f ../04-kafka-users.yaml
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+    
+    kubectl apply -f "${PROJECT_DIR}/04-kafka-users.yaml"
     
     sleep 10
     
@@ -98,7 +107,10 @@ create_users() {
 deploy_test_apps() {
     print_info "Deploying test applications..."
     
-    kubectl apply -f ../05-test-applications.yaml
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+    
+    kubectl apply -f "${PROJECT_DIR}/05-test-applications.yaml"
     
     sleep 5
     
@@ -110,7 +122,10 @@ deploy_test_apps() {
 deploy_monitoring() {
     print_info "Deploying monitoring stack..."
     
-    kubectl apply -f ../06-monitoring.yaml
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+    
+    kubectl apply -f "${PROJECT_DIR}/06-monitoring.yaml"
     
     print_info "Waiting for monitoring components..."
     kubectl wait --for=condition=ready pod -l app=prometheus -n kafka --timeout=300s
